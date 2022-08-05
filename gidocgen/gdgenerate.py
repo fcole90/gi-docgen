@@ -189,12 +189,14 @@ def gen_index_ancestor(ancestor_type, namespace, config, md=None):
         ns = ancestor_type.namespace or namespace.name
     res = namespace.repository.find_class(ancestor_name, ns)
     if res is not None:
-        ancestor_ns = res[0].name
+        ancestor_ns_name = res[0].name
         ancestor_ctype = res[1].base_ctype
+        ancestor_ns = res[0]
         ancestor = res[1]
     else:
-        ancestor_ns = ancestor_type.namespace or namespace.name
+        ancestor_ns_name = ancestor_type.namespace or namespace.name
         ancestor_ctype = ancestor_type.base_ctype
+        ancestor_ns = None
         ancestor = None
     n_methods = 0
     methods = []
@@ -214,19 +216,19 @@ def gen_index_ancestor(ancestor_type, namespace, config, md=None):
         if n_methods > 0 and n_methods < 24:
             for m in ancestor.methods:
                 if not config.is_hidden(ancestor_name, "method", m.name):
-                    methods.append(gen_index_func(m, namespace, md))
+                    methods.append(gen_index_func(m, ancestor_ns, md))
         for p in ancestor.properties.values():
             if not config.is_hidden(ancestor_name, "property", p.name):
                 n_properties += 1
-                properties.append(gen_index_property(p, namespace, md))
+                properties.append(gen_index_property(p, ancestor_ns, md))
         for s in ancestor.signals.values():
             if not config.is_hidden(ancestor_name, "signal", s.name):
                 n_signals += 1
-                signals.append(gen_index_signal(s, namespace, md))
+                signals.append(gen_index_signal(s, ancestor_ns, md))
     return {
-        "namespace": ancestor_ns,
+        "namespace": ancestor_ns_name,
         "name": ancestor_name,
-        "fqtn": f"{ancestor_ns}.{ancestor_name}",
+        "fqtn": f"{ancestor_ns_name}.{ancestor_name}",
         "type_cname": ancestor_ctype,
         "properties": properties,
         "n_properties": n_properties,
@@ -245,12 +247,14 @@ def gen_index_implements(iface_type, namespace, config, md=None):
         ns = iface_type.namespace or namespace.name
     res = namespace.repository.find_interface(iface_name, ns)
     if res is not None:
-        iface_ns = res[0].name
+        iface_ns_name = res[0].name
         iface_ctype = res[1].base_ctype
+        iface_ns = res[0]
         iface = res[1]
     else:
-        iface_ns = iface_type.namespace or namespace.name
+        iface_ns_name = iface_type.namespace or namespace.name
         iface_ctype = iface_type.base_ctype
+        iface_ns = None
         iface = None
     n_methods = 0
     methods = []
@@ -268,17 +272,17 @@ def gen_index_implements(iface_type, namespace, config, md=None):
         if n_methods > 0 and n_methods < 24:
             for m in iface.methods:
                 if not config.is_hidden(iface_name, "method", m.name):
-                    methods.append(gen_index_func(m, namespace, md))
+                    methods.append(gen_index_func(m, iface_ns, md))
         for p in iface.properties.values():
             if not config.is_hidden(iface_name, "property", p.name):
                 n_properties += 1
-                properties.append(gen_index_property(p, namespace, md))
+                properties.append(gen_index_property(p, iface_ns, md))
         for s in iface.signals.values():
             if not config.is_hidden(iface.name, "signal", s.name):
                 n_signals += 1
-                signals.append(gen_index_signal(s, namespace, md))
+                signals.append(gen_index_signal(s, iface_ns, md))
     return {
-        "namespace": iface_ns,
+        "namespace": iface_ns_name,
         "name": iface_name,
         "fqtn": f"{iface_ns}.{iface_name}",
         "type_cname": iface_ctype,
@@ -2671,7 +2675,12 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     def dump_tree(node, out):
         for k in node:
             if '.' in k:
-                out.append(f'<li class="type"><code>{k}</code>')
+                ns, name = k.split('.', 2)
+                data_ns = f'data-namespace="{ns}"'
+                data_link = f'data-link="class.{name}.html"'
+                href = 'href="javascript:void(0)"'
+                css_class = 'class="external"'
+                out.append(f'<li class="type"><a {data_ns} {data_link} {href} {css_class}><code>{k}</code></a>')
             else:
                 out.append(f'<li class="type"><a href="class.{k}.html"><code>{k}</code></a>')
             if len(node[k]) != 0:
@@ -2683,7 +2692,7 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     if len(objects_tree) != 0:
         res += ["<div class=\"docblock\">"]
         res += ["<ul class=\"type root\">"]
-        res += [" <li class=\"type\"><code>GObject</code></li><ul class=\"type\">"]
+        res += [" <li class=\"type\"><a data-namespace=\"GObject\" data-link=\"class.Object.html\" href=\"javascript:void(0)\" class=\"external\"><code>GObject.Object</code></a></li><ul class=\"type\">"]  # noqa: E501
         dump_tree(objects_tree, res)
         res += [" </ul></li>"]
         res += ["</ul>"]
@@ -2692,7 +2701,7 @@ def gen_types_hierarchy(config, theme_config, output_dir, jinja_env, repository)
     if len(typed_tree) != 0:
         res += ["<div class=\"docblock\">"]
         res += ["<ul class=\"type root\">"]
-        res += [" <li class=\"type\"><code>GTypeInstance</code></li><ul class=\"type\">"]
+        res += [" <li class=\"type\"><a data-namespace=\"GObject\" data-link=\"struct.TypeInstance.html\" href=\"javascript:void(0)\" class=\"external\"><code>GObject.TypeInstance</code></li><ul class=\"type\">"]  # noqa: E501
         dump_tree(typed_tree, res)
         res += [" </ul></li>"]
         res += ["</ul>"]
